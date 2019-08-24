@@ -69,6 +69,11 @@
         
 }
 
+#rf-tablegrid .rf-glowing-root {
+    background: lightgreen;
+        
+}
+
 #rf-tablegrid .rf-selected {
 	background: gold;
 }
@@ -76,5 +81,5 @@
 /* style for words that didn't make it on the grid */
 .rf-pfalse {
     color: gray;
-    visibility: hidden; 
+    display: none; 
 }

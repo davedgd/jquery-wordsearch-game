@@ -3,32 +3,35 @@
     <head>
         <title>Word Search Game - Ryan Fernandes</title>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-        <script type="text/javascript" src="jquery-1.6.2.min.js"></script>
-        <script type="text/javascript" src="jquery-ui-1.8.16.custom.min.js"></script>
-        <script type="text/javascript" src="jquery.wordsearchgame.js"></script>
+		<script src="https://code.jquery.com/jquery.min.js"></script>
+		<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+		<script src="jquery.ui.touch-punch.js"></script>
+		<script type="text/javascript" src="jquery.wordsearchgame.js"></script>
         <link  rel="stylesheet" type="text/css" href="jquery.wordsearchgame.css">
 
         <script>
 		$(document).ready( function () {
-			var words = "earth,mars,mercury";/*,neptune,pluto,saturn,jupiter,one,two,"+
-						"three,four,five,six,seven,eight,mozart,bach,meyer,rose,mahler";*/
+			
+			//define words
+			var words = "earth,mars,mercury,neptune,pluto,saturn,jupiter,one,two,three,four,five,six,seven,eight,mozart,bach,meyer,rose,mahler";
 			
 			//attach the game to a div
-			$("#theGrid").wordsearchwidget(
-				{"wordlist" : words,
-				"gridsize" : 10, 
-				"onWordFound" : function(ob){
+			$("#theGrid").wordsearchwidget({
+				"wordlist" : words, 
+				"gridsize" : 15,
+				"allowhelp" : true,
+				"onWordFound" : function(ob) {
 					$('#onWordFound').html("Found: " + ob.word);
 					d = setTimeout(function(){
 						clearTimeout(d);
 						$('#onWordFound').html(" ");					
-					},3000);
-
-				},
-				"onWordSearchComplete" :function(){
+					}, 3000);
+					}, // set to null for nothing (e.g., "onWordFound": null)
+				"onWordSearchComplete" : function() {
 					$('#onWordSearchComplete').html("Word Search Complete");
-				}
+					} // set to null for nothing (e.g., "onWordSearchComplete": null)
 			});
+			
 		});
 
     

@@ -19,13 +19,16 @@
 //		$(document).ready( function () {
 //		var words = "earth,mars,mercury,neptune,pluto,saturn,jupiter,one,two,
 //		        three,four,five,six,seven,eight,mozart,bach,meyer,rose,mahler";
-//		$("#theGrid").wordsearchwidget({"wordlist" : words,"gridsize" : 12, 
-//		onWordFound: function(object){
-//		alert(object.word);
-//		},
-//		onWordSearchComplete: function(){
+//		$("#theGrid").wordsearchwidget({
+//      "wordlist" : words,
+//      "gridsize" : 12, 
+//      "allowhelp" : true,
+//		onWordFound: function(object) {
+//		    alert(object.word);
+//		    },
+//		onWordSearchComplete: function() {
 //			alert("Game over");
-//		}
+//		    }
 //		});
 //		});
 //	
@@ -34,6 +37,7 @@
 //  -------
 //  gridsize - Size of grid to generate (this will be a square)
 //	wordlist - Comma separated list of words to place on the grid
+//  allowhelp - Whether to allow user assistance in finding words
 //	
 //	-------------
 //	What it does: 				
@@ -86,7 +90,7 @@
 //			Objects related to the controller
 //			1) GameWidgetHelper 		
 //			
-//	
+//			
 //  -------
 //  Events: 
 //  -------		
@@ -100,19 +104,30 @@
 //==============================================================================
 
 (function( $, undefined ) {
-	
+
+	var requestRunning = false //avoid multiple quick wordcontainer call error (alternative is to make highlight delay shorter than two clicks can happen, e.g., 50ms rather than 500)
+    var overlappedWordList = new Array()
+    
     var currentWord = 0;	
 	var maxWords = 0;
-	var encontrePalabra = undefined;
-	var cuandoEncuentreTodas = undefined;
+	var onWordFound = undefined;
+    var onWordSearchComplete = undefined;
+    
     $.widget("ryanf.wordsearchwidget", $.ui.mouse, {
 
             options : {
                 wordlist : null,
-				gridsize : 10,
-				onWordFound: undefined,
-				onWordSearchComplete: undefined
+                gridsize : 10,
+                allowhelp : true,
+                onWordFound : undefined,
+				onWordSearchComplete : undefined
             },
+			_mapEventToCell: function(event) {
+                var currentColumn = Math.ceil((event.pageX - this._cellX) / this._cellWidth);
+                var currentRow = Math.ceil((event.pageY - this._cellY) / this._cellHeight);
+                var el = $('#rf-tablegrid tr:nth-child('+currentRow+') td:nth-child('+currentColumn+')');
+                return el;
+			},
             
             _create : function () {
                 //member variables
@@ -121,8 +136,8 @@
                 this.hotzone    = new Hotzone();
                 this.arms       = new Arms();
                 
-                encontrePalabra = this.options.onWordFound;
-				cuandoEncuentreTodas = this.options.onWordSearchComplete;
+                onWordFound = this.options.onWordFound;
+				onWordSearchComplete = this.options.onWordSearchComplete;
 				maxWords = this.options.wordlist.split(",").length;
                 
 				GameWidgetHelper.renderGame(this.element[0],this.model);
@@ -130,7 +145,11 @@
 				this.options.distance=0; // set mouse option property
                 this._mouseInit();
                 
-                
+                var cell = $('#rf-tablegrid tr:first td:first');
+        this._cellWidth = cell.outerWidth();
+        this._cellHeight = cell.outerHeight();
+        this._cellX = cell.offset().left;
+        this._cellY = cell.offset().top;
             },//_create
             
             destroy : function () {
@@ -145,30 +164,32 @@
             },
             
             //mouse callbacks
-            _mouseStart: function(event) {
+            
+            _mouseStart: function(event, allowhelp = this.options.allowhelp) {
 				
-				var panel = $(event.target).parents("div").attr("id");
+				var panel = $(event.target).parents("div").attr("id")
+				
 				if ( panel == 'rf-searchgamecontainer') {
-					this.startedAt.setRoot( event.target );
+					this.startedAt.setRoot( event.target )
 					this.hotzone.createZone( event.target )
 				}
-				else if ( panel == 'rf-wordcontainer') {
+				else if ( panel == 'rf-wordcontainer' && allowhelp == true) {
+					
 					//User has requested help. Identify the word on the grid
 					//We have a reference to the td in the cells that make up this word
 					var idx = $(event.target).parent().children().index(event.target);
 
 					var selectedWord = this.model.wordList.get(idx);
-					$(selectedWord.cellsUsed).each ( function () {
-						Visualizer.highlight($(this.td));
-					});
+					if (!requestRunning)
+						Visualizer.highlightHelp(selectedWord);
 					
 				}
 
             },
             
             _mouseDrag : function(event) {
-                
-                //if this.root - clear out everything and return to orignal clicked state
+                event.target = this._mapEventToCell(event); 
+                //if this.root - clear out everything and return to original clicked state
                 if (this.startedAt.isSameCell(event.target)) {
                     this.arms.returnToNormal();
                     this.hotzone.setChosen(-1);
@@ -200,24 +221,28 @@
 
                 //get word
 				var selectedword = '';
-                $('.rf-glowing, .rf-highlight', this.element[0]).each(function() {
+                $('.rf-glowing, .rf-glowing-root, .rf-highlight', this.element[0]).each(function() {
                         var u = $.data(this,"cell");
                         selectedword += u.value;
                 });
 
                 var wordIndex = this.model.wordList.isWordPresent(selectedword)
                 if (wordIndex!=-1) {
-                    $('.rf-glowing, .rf-highlight', this.element[0]).each(function() {
+                    $('.rf-glowing, .rf-glowing-root, .rf-highlight', this.element[0]).each(function() {
                             Visualizer.select(this);
                             $.data(this,"selected", "true");
 
                     });
-                    GameWidgetHelper.signalWordFound(wordIndex);
+                    GameWidgetHelper.signalWordFound(wordIndex)
                 }
 
-                this.hotzone.returnToNormal();
-                this.startedAt.returnToNormal();
-                this.arms.returnToNormal();
+				var panel = $(event.target).parents("div").attr("id")
+				if ( panel == 'rf-searchgamecontainer') {
+
+					this.hotzone.returnToNormal();
+					this.startedAt.returnToNormal();
+					this.arms.returnToNormal();
+					}
             }
             
         }
@@ -318,11 +343,11 @@ function Arms() {
         }
     }
 
-	//lights up the cells that from the root cell tothe current one
+	//lights up the cells that from the root cell to the current one
     this.glowTo = function (upto) {
         var to = $(this.arms).index(upto);
         
-        for (var x=1;x<this.arms.length;x++) {
+        for (var x=0;x<this.arms.length;x++) { //light up through hot zone
             
             if (x<=to) {
                 Visualizer.glow(this.arms[x]);
@@ -423,11 +448,11 @@ function Root() {
     
     this.setRoot = function (root) {
         this.root = root;
-        Visualizer.glow(this.root);
+        Visualizer.glowRoot(this.root);
     }
     
     this.returnToNormal = function () {
-        Visualizer.restore(this.root);
+        Visualizer.restoreRoot(this.root);
     }
     
     this.isSameCell = function (t) {
@@ -451,10 +476,21 @@ var Visualizer = {
             .addClass("rf-glowing");
     },
     
+    glowRoot : function (c) {
+        $(c).removeClass("rf-armed")
+            .removeClass("rf-selected")
+            .addClass("rf-glowing-root");
+    },
+    
     arm : function (c) {
         $(c)//.removeClass("rf-selected")
             .removeClass("rf-glowing")
+            .removeClass("rf-glowing-root")
             .addClass("rf-armed");
+            
+        if ( c!=null && $.data(c,"selected") == "true" ) {
+            $(c).addClass("rf-selected");
+        }
         
     },
     
@@ -467,21 +503,37 @@ var Visualizer = {
         }
     },
     
+    restoreRoot : function (c) {
+        $(c).removeClass("rf-armed")
+            .removeClass("rf-glowing-root");
+            
+        if ( c!=null && $.data(c,"selected") == "true" ) {
+            $(c).addClass("rf-selected");
+        }
+    },
+    
     select : function (c) {
+    	requestRunning = true
         $(c).removeClass("rf-armed")
             .removeClass("rf-glowing")
 			.animate({'opacity' : '20'}, 500, "linear", function () {
 				$(c).removeClass("rf-highlight").addClass("rf-selected")
-				.animate({'opacity' : 'show'}, 500, "linear")
+				.animate({'opacity' : 'show'}, 500, "linear", requestRunning = false)
 			})
-            
-        
     },
     
     highlight : function (c) {
         $(c).removeClass("rf-armed")
             .removeClass("rf-selected")
 			.addClass("rf-highlight");
+    },
+    
+    //this function fixes the highlighting issue for overlapped words by using manually set cellUsedLocations (array where cellUsedLocations[i][0] = row and cellUsedLocations[i][1] = col)
+    highlightHelp : function (w) {
+    
+        for (i=0;i<w.size;i++) {
+        	$("#rf-tablegrid tr:eq("+(w.cellsUsedLocations[i][0])+") td:eq("+(w.cellsUsedLocations[i][1])+")").addClass("rf-highlight")
+        	}
     },
 	
     signalWordFound : function (w) {
@@ -621,7 +673,7 @@ function HorizontalPopulator(row, col, word, grid) {
 
         // try and place word in this row
 
-        // check if this row has a contigous block free
+        // check if this row has a contiguous block free
         // 1. starting at col (honour the input)
         if (this.willWordFit()) {
             this.writeWord();
@@ -634,7 +686,7 @@ function HorizontalPopulator(row, col, word, grid) {
                 var xRow = (this.row+i)%this.size; // loop through all rows starting at current;
 
                 // 2. try starting anywhere on line
-                var startingPoint = this.findContigousSpace(xRow, word);
+                var startingPoint = this.findContiguousSpace(xRow, word);
 
                 if (startingPoint == -1) {
                     // if not, then try to see if we can overlap this word only any existing alphabets
@@ -670,13 +722,17 @@ function HorizontalPopulator(row, col, word, grid) {
     this.writeWord = function () {
 
         var chars = word.chars;
+        word.row = this.row+1
+        word.col = this.col+1
         for (var i=0;i<word.size;i++) {
             var c = new Cell();
             c.value = chars[i];
+            word.cellsUsedLocations.push(new Array(this.row,this.col+i))
             this.cells[this.row][this.col+i] = c;
             word.containedIn(c);
             word.isPlaced = true;
         }
+        //console.log(word)
 
     }
 
@@ -705,13 +761,13 @@ function HorizontalPopulator(row, col, word, grid) {
         return isFree;
     }
     
-    //try harder, check if there is contigous space anywhere on this line.
-    this.findContigousSpace = function (row, word) {
+    //try harder, check if there is contiguous space anywhere on this line.
+    this.findContiguousSpace = function (row, word) {
         var freeLocation = -1;
         var freeCounter=0;
         var chars = word.chars;
         for (var i=0;i<this.size;i++) {
-            if (this.cells[row][i].isUnwritten() || this.cells[row][i] == chars[i]) {
+            if (this.cells[row][i].isUnwritten() || this.cells[row][i] == chars[freeCounter]) {
                 freeCounter++;
                 if (freeCounter == word.size) {
                     freeLocation = (i - (word.size-1));
@@ -744,7 +800,7 @@ function VerticalPopulator(row, col, word, grid) {
 
         // try and place word in this row
 
-        // check if this row has a contigous block free
+        // check if this row has a contiguous block free
         // 1. starting at col (honour the input)
         if (this.willWordFit()) {
             this.writeWord();
@@ -757,7 +813,7 @@ function VerticalPopulator(row, col, word, grid) {
                 var xCol = (this.col+i)%this.size; // loop through all rows starting at current;
 
                 // 2. try starting anywhere on line
-                var startingPoint = this.findContigousSpace(xCol, word);
+                var startingPoint = this.findContiguousSpace(xCol, word);
 
                 if (startingPoint == -1) {
                     // if not, then try to see if we can overlap this word only any existing alphabets
@@ -792,9 +848,12 @@ function VerticalPopulator(row, col, word, grid) {
     this.writeWord = function () {
 
         var chars = word.chars;
+        word.row = this.row+1
+        word.col = this.col+1
         for (var i=0;i<word.size;i++) {
             var c = new Cell();
             c.value = chars[i];
+            word.cellsUsedLocations.push(new Array(this.row+i,this.col))
             this.cells[this.row+i][this.col] = c; //CHANGED
             word.containedIn(c);
             word.isPlaced = true;
@@ -812,8 +871,15 @@ function VerticalPopulator(row, col, word, grid) {
         var isFree = false;
         var freeCounter=0;
         var chars = this.word.chars;
+        
+        //for (p=0;p<15;p++)
+        	//for (q=0;q<15;q++)
+        	//	console.log(p + ' ' + q + ' ' + this.cells[p][q].value)
+        
         for (var i=row;i<this.size;i++) { // CHANGED
             if (this.cells[i][col].isUnwritten() || chars[i] == this.cells[i][col].value) { //CHANGED
+            	//if (chars[i] == this.cells[i][col].value)
+            		//console.log(chars[i] + ' ' + this.cells[i][col].value + ' ' + chars)
                 freeCounter++;
                 if (freeCounter == word.size) {
                     isFree = true;
@@ -827,16 +893,26 @@ function VerticalPopulator(row, col, word, grid) {
         return isFree;
     }
     
-    //try harder, check if there is contigous space anywhere on this line.
-    this.findContigousSpace = function (col, word) {
+    //try harder, check if there is contiguous space anywhere on this line.
+    this.findContiguousSpace = function (col, word) {
+        
+        //console.log(word)
+        
         var freeLocation = -1;
         var freeCounter=0;
+        //var overlapCounter = 0
         var chars = word.chars;
         for (var i=0;i<this.size;i++) {
-            if (this.cells[i][col].isUnwritten() || chars[i] == this.cells[i][col].value) { //CHANGED
+            if (this.cells[i][col].isUnwritten() || chars[freeCounter] == this.cells[i][col].value) { //CHANGED
+            	/*if (chars[i] == this.cells[i][col].value) {
+            		console.log(chars[i] + ' ' + this.cells[i][col].value + ' ' + chars)
+            		overlapCounter++
+            		}*/
                 freeCounter++;
+                
                 if (freeCounter == word.size) {
                     freeLocation = (i - (word.size-1));
+                    //console.log(freeLocation)
                     break;
                 }
             }
@@ -866,14 +942,14 @@ function LeftDiagonalPopulator(row, col, word, grid) {
 
         // try and place word in this row
 
-        // check if this row has a contigous block free
+        // check if this row has a contiguous block free
         // 1. starting at col (honour the input)
         if (this.willWordFit()) {
             this.writeWord();
         }
         else {
 
-            var output = this.findContigousSpace(this.row,this.col, word);
+            var output = this.findContiguousSpace(this.row,this.col, word);
 
             if (output[0] != true) {
                 
@@ -881,7 +957,7 @@ function LeftDiagonalPopulator(row, col, word, grid) {
                 OUTER:for (var col=0, row=(this.size-word.size); row>=0; row--) {
                     for (var j=0;j<2;j++) {
 
-                        var op = this.findContigousSpace( (j==0)?row:col, (j==0)?col:row, word);
+                        var op = this.findContiguousSpace( (j==0)?row:col, (j==0)?col:row, word);
 
                         if (op[0] == true) {
                             this.row = op[1];
@@ -915,9 +991,12 @@ function LeftDiagonalPopulator(row, col, word, grid) {
         var chars = word.chars;
         var lrow = this.row;
         var lcol = this.col;
+        word.row = this.row+1
+        word.col = this.col+1
         for (var i=0;i<word.size;i++) {
             var c = new Cell();
             c.value = chars[i];
+            word.cellsUsedLocations.push(new Array(lrow,lcol))
             this.cells[lrow++][lcol++] = c;
             word.containedIn(c);
             word.isPlaced=true;
@@ -956,8 +1035,8 @@ function LeftDiagonalPopulator(row, col, word, grid) {
         return isFree;
     }
     
-    //try harder, check if there is contigous space anywhere on this line.
-    this.findContigousSpace = function (xrow, xcol,word) {
+    //try harder, check if there is contiguous space anywhere on this line.
+    this.findContiguousSpace = function (xrow, xcol,word) {
         var freeLocation = false;
         var freeCounter=0;
         var chars = word.chars;
@@ -979,6 +1058,7 @@ function LeftDiagonalPopulator(row, col, word, grid) {
             }
             else {
                 freeCounter=0;
+                i=0
             }
             lcol++;
             lrow++;
@@ -999,7 +1079,12 @@ function LeftDiagonalPopulator(row, col, word, grid) {
 
 //Create a RightDiagonal Populator Strategy 
 function RightDiagonalPopulator(row, col, word, grid) {
-    
+
+    // reverse rightdiagonal placement for left-to-right reading
+    word.chars = word.value.split('').reverse();
+    word.value = word.value.split('').reverse().join('');
+    //console.log(word);
+
     this.grid = grid;
     this.row =  row;
     this.col = col;
@@ -1013,7 +1098,7 @@ function RightDiagonalPopulator(row, col, word, grid) {
 
         // try and place word in this row
 
-        // check if this row has a contigous block free
+        // check if this row has a contiguous block free
         // 1. starting at col (honour the input)
         var rr=0;
         if (this.willWordFit()) {
@@ -1021,7 +1106,7 @@ function RightDiagonalPopulator(row, col, word, grid) {
         }
         else {
 
-            var output = this.findContigousSpace(this.row,this.col, word);
+            var output = this.findContiguousSpace(this.row,this.col, word);
 
             if (output[0] != true) {
                 
@@ -1029,7 +1114,7 @@ function RightDiagonalPopulator(row, col, word, grid) {
                 OUTER:for (var col=this.size-1, row=(this.size-word.size); row>=0; row--) {
                     for (var j=0;j<2;j++) {
 
-                        var op = this.findContigousSpace( (j==0)?row:(this.size-1-col), (j==0)?col:(this.size-1-row), word);
+                        var op = this.findContiguousSpace( (j==0)?row:(this.size-1-col), (j==0)?col:(this.size-1-row), word);
 
                         if (op[0] == true) {
                             this.row = op[1];
@@ -1063,9 +1148,12 @@ function RightDiagonalPopulator(row, col, word, grid) {
         var chars = word.chars;
         var lrow = this.row;
         var lcol = this.col;
+        word.row = this.row+1
+        word.col = this.col+1
         for (var i=0;i<word.size;i++) {
             var c = new Cell();
             c.value = chars[i];
+            word.cellsUsedLocations.push(new Array(lrow,lcol))
             this.cells[lrow++][lcol--] = c;
             word.containedIn(c);
             word.isPlaced = true;
@@ -1104,8 +1192,8 @@ function RightDiagonalPopulator(row, col, word, grid) {
         return isFree;
     }
     
-    //try harder, check if there is contigous space anywhere on this line.
-    this.findContigousSpace = function (xrow, xcol,word) {
+    //try harder, check if there is contiguous space anywhere on this line.
+    this.findContiguousSpace = function (xrow, xcol, word) {
         var freeLocation = false;
         var freeCounter=0;
         var chars = word.chars;
@@ -1127,6 +1215,7 @@ function RightDiagonalPopulator(row, col, word, grid) {
             }
             else {
                 freeCounter=0;
+                i=0
             }
             lrow++;
             lcol--;
@@ -1170,6 +1259,7 @@ function Word(val) {
     this.originalValue = this.value;
     this.isFound= false;
     this.cellsUsed = new Array();
+    this.cellsUsedLocations = new Array();
 
     this.isPlaced = false;
     this.row = -1;
@@ -1207,8 +1297,14 @@ function WordList() {
     this.words = new Array();
     
     this.loadWords = function (csvwords) {
+
+		//fix extra spaces bug
+		csvwordsList = csvwords.split(",")
+		for (i = 0; i<csvwordsList.length; i++)
+			csvwordsList[i] = jQuery.trim(csvwordsList[i])
+		
         var $n = this.words;
-        $(csvwords.split(",")).each(function () {
+        $(csvwordsList).each(function () {
             $n.push(new Word(this));
         });
         
@@ -1256,6 +1352,23 @@ var Util = {
     }
 } 
 
+/*
+Overlapped word fix
+*/
+function checkOverlappedWords (model) {
+	for (i=0; i<model.wordList.words.length;i++) {
+		//console.log(model.wordList.words[i])
+		for (j=0; j<model.wordList.words[i].cellsUsed.length; j++) {
+			//console.log(model.wordList.words[i].cellsUsed[j].td)
+			if(!model.wordList.words[i].cellsUsed[j].td) {
+				console.log('Overlapped Word:' + model.wordList.words[i].value)
+				console.log(model.wordList.words[i])
+				}
+			}
+		}
+	}			
+			
+
 
 //------------------------------------------------------------------------------
 // OBJECTS RELATED TO THE CONTROLLER
@@ -1288,7 +1401,7 @@ var GameWidgetHelper = {
         for (var i=0;i<grid.size();i++) {
             puzzleGrid += "<tr>";
             for (var j=0;j<grid.size();j++) {
-                puzzleGrid += "<td  class='rf-tgrid'>"+cells[i][j].value+"</td>";
+                puzzleGrid += "<td class='rf-tgrid'>"+cells[i][j].value+"</td>";
             }
             puzzleGrid += "</tr>";
         }
@@ -1298,6 +1411,7 @@ var GameWidgetHelper = {
         var x=0;
         var y=0;
         $("tr","#rf-tablegrid").each(function () {
+        	//console.log(this)
             $("td", this).each(function (col){
                 var c = cells[x][y++];
 				$.data(this,"cell",c);
@@ -1315,7 +1429,7 @@ var GameWidgetHelper = {
 
         $(container).append(words);
 
-
+		checkOverlappedWords(model)
     },
 	
 	signalWordFound : function(idx) {
@@ -1323,12 +1437,12 @@ var GameWidgetHelper = {
 		if (!jQuery(w).hasClass('rf-foundword')){
 			Visualizer.signalWordFound(w);
 			currentWord++;
-			if (typeof encontrePalabra == "function"){
-					encontrePalabra({id:idx,word:$(w).text()});
+			if (typeof onWordFound == "function"){
+					onWordFound({id:idx,word:$(w).text()});
 				}
-			if (typeof cuandoEncuentreTodas == "function"){
+			if (typeof onWordSearchComplete == "function"){
 					if (currentWord >= maxWords){
-						cuandoEncuentreTodas({});
+						onWordSearchComplete({});
 					}
 				}
 			}	
