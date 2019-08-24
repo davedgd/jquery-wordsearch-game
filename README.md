@@ -1,0 +1,2 @@
+# jquery-wordsearch-game
+A fork of Ryan Fernandes' "The Word Search Game Widget" (https://code.google.com/archive/p/jquery-wordsearch-game/) with fixes and new features.
