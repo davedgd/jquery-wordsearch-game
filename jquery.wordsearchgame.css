@@ -7,7 +7,7 @@
     font-size: 14px;
     margin: 1px;
     padding: 10px;
-/*    border: 1px solid bisque;*/
+/*  border: 1px solid bisque;*/
     vertical-align: middle;
     text-align: center;
 
@@ -34,7 +34,7 @@
     float :left;
     padding-right: 50px; 
     cursor: default;
-	margin : 1em 1em 1em 0;
+    margin : 0 .5em .5em 0;
 	
     border: 2px solid;
     border-color: gold;
