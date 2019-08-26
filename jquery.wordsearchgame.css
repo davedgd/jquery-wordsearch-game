@@ -5,7 +5,7 @@
     font-family: Verdana,Arial,Helvetica,sans-serif;
     font-weight: bold;
     font-size: 14px;
-    margin: 1px;
+    margin: .5em;
     padding: 10px;
 /*  border: 1px solid bisque;*/
     vertical-align: middle;
@@ -34,7 +34,7 @@
     float :left;
     padding-right: 50px; 
     cursor: default;
-    margin : 0 .5em .5em 0;
+    margin : .5em .5em .5em .5em;
 	
     border: 2px solid;
     border-color: gold;
@@ -43,7 +43,7 @@
     -khtml-border-radius: 20px;
     border-radius: 20px;	
     
-	cursor: pointer;	
+    cursor: pointer;	
 }
 
 /* Style for the words that have been found */
