@@ -146,11 +146,12 @@
                 this._mouseInit();
                 
                 var cell = $('#rf-tablegrid tr:first td:first');
-        this._cellWidth = cell.outerWidth();
-        this._cellHeight = cell.outerHeight();
-        this._cellX = cell.offset().left;
-        this._cellY = cell.offset().top;
-            },//_create
+                this._cellWidth = cell.outerWidth();
+                this._cellHeight = cell.outerHeight();
+                this._cellX = cell.offset().left;
+                this._cellY = cell.offset().top;
+
+            }, //_create
             
             destroy : function () {
                 
@@ -189,7 +190,7 @@
             
             _mouseDrag : function(event) {
                 event.target = this._mapEventToCell(event); 
-                //if this.root - clear out everything and return to original clicked state
+                //if this.root (aka this.startedAt) - clear out everything and return to original clicked state
                 if (this.startedAt.isSameCell(event.target)) {
                     this.arms.returnToNormal();
                     this.hotzone.setChosen(-1);
@@ -222,7 +223,7 @@
                 //get word
 				var selectedword = '';
                 $('.rf-glowing, .rf-glowing-root, .rf-highlight', this.element[0]).each(function() {
-                        var u = $.data(this,"cell");
+                        var u = $.data(this, "cell");
                         selectedword += u.value;
                 });
 
@@ -230,19 +231,21 @@
                 if (wordIndex!=-1) {
                     $('.rf-glowing, .rf-glowing-root, .rf-highlight', this.element[0]).each(function() {
                             Visualizer.select(this);
-                            $.data(this,"selected", "true");
+                            $.data(this, "selected", "true");
 
                     });
                     GameWidgetHelper.signalWordFound(wordIndex)
                 }
 
-				var panel = $(event.target).parents("div").attr("id")
-				if ( panel == 'rf-searchgamecontainer') {
+                var panel = $(event.target).parents("div").attr("id");
+                //alert(panel)
+                
+				//if ( panel == 'rf-searchgamecontainer' || panel == 'rf-wordcontainer') {
 
-					this.hotzone.returnToNormal();
-					this.startedAt.returnToNormal();
-					this.arms.returnToNormal();
-					}
+				this.hotzone.returnToNormal();
+				this.startedAt.returnToNormal();
+				this.arms.returnToNormal();
+				//	}
             }
             
         }
@@ -363,7 +366,7 @@ function Arms() {
     this.returnToNormal = function () {
         if (!this.arms) return;
         
-        for (var t=1;t<this.arms.length;t++) { //don't clear the hotzone
+        for (var t=0;t<this.arms.length;t++) { //don't clear the hotzone
             Visualizer.restore(this.arms[t]);
         }
     }
@@ -1239,11 +1242,11 @@ function Model() {
     this.grid= null;
     this.wordList= null;
     
-    this.init = function(grid,list) {
+    this.init = function(grid, list) {
         this.grid = grid;
         this.wordList = list;
     
-        for (var i=0;i<this.wordList.size();i++) {
+        for (var i=0; i<this.wordList.size(); i++) {
             grid.put( Util.random(this.grid.size()), Util.random(this.grid.size()), this.wordList.get(i) );
         }
 
@@ -1300,8 +1303,13 @@ function WordList() {
 
 		//fix extra spaces bug
 		csvwordsList = csvwords.split(",")
-		for (i = 0; i<csvwordsList.length; i++)
-			csvwordsList[i] = jQuery.trim(csvwordsList[i])
+		for (i = 0; i<csvwordsList.length; i++) {
+            csvwordsList[i] = jQuery.trim(csvwordsList[i])
+            if (/\s/.test(csvwordsList[i])) {
+                alert('Words in the word list should not contain spaces! Aborting...')
+                throw new Error("Words in the word list should not contain spaces! Aborting...");
+            }
+        }
 		
         var $n = this.words;
         $(csvwordsList).each(function () {
