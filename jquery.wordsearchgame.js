@@ -202,18 +202,21 @@
                     
                     //if in hotzone
                     var chosenOne = this.hotzone.index(event.target);
+
+                    //console.log(chosenOne)
                     if (chosenOne!= -1) {
+
                         //set target to glowing; set rest of hotzone to armed
                         this.hotzone.setChosen(chosenOne);
                         
                         //calculate arms and set to armed
                         this.arms.deduceArm(this.startedAt.root, chosenOne);
-                        
-                        
-                    }else { //in arms
-                        //set glowing from target to root
-                        this.arms.glowTo(event.target)
+
                     }
+
+                    //important: needed to glow cell next to root (fixed rendering issues around root)
+                    this.arms.glowTo(event.target);
+                    
                 }
                 
             },
@@ -244,7 +247,8 @@
 
 				this.hotzone.returnToNormal();
 				this.startedAt.returnToNormal();
-				this.arms.returnToNormal();
+                this.arms.returnToNormal();
+                
 				//	}
             }
             
@@ -341,7 +345,7 @@ function Arms() {
 
 
         }
-        for (var x=1;x<this.arms.length;x++) {
+        for (var x=0;x<this.arms.length;x++) {
             Visualizer.arm(this.arms[x]);
         }
     }
@@ -349,7 +353,7 @@ function Arms() {
 	//lights up the cells that from the root cell to the current one
     this.glowTo = function (upto) {
         var to = $(this.arms).index(upto);
-        
+
         for (var x=0;x<this.arms.length;x++) { //light up through hot zone
             
             if (x<=to) {
@@ -357,7 +361,6 @@ function Arms() {
             }
             else {
                 Visualizer.arm(this.arms[x]);
-
             }
         }
     }
@@ -430,9 +433,10 @@ function Hotzone() {
 
     this.returnToNormal = function () {
 
-        for (var t=0;t<this.elems.length;t++) {
-            Visualizer.restore(this.elems[t]);
-        }
+        if (this.elems != null) // in case there is nothing to restore (e.g., fresh puzzle)
+            for (var t=0;t<this.elems.length;t++) {
+                Visualizer.restore(this.elems[t]);
+            }
     }
     
     this.clean = function() {
@@ -488,7 +492,6 @@ var Visualizer = {
     arm : function (c) {
         $(c)//.removeClass("rf-selected")
             .removeClass("rf-glowing")
-            .removeClass("rf-glowing-root")
             .addClass("rf-armed");
             
         if ( c!=null && $.data(c,"selected") == "true" ) {
@@ -500,60 +503,71 @@ var Visualizer = {
     restore : function (c) {
         $(c).removeClass("rf-armed")
             .removeClass("rf-glowing");
-            
-        if ( c!=null && $.data(c,"selected") == "true" ) {
+        
+        // added rf-highlight to avoid highlightHelp graphical issue
+        if ( c!=null && $.data(c,"selected") == "true" && !$(c).hasClass("rf-highlight")) {
             $(c).addClass("rf-selected");
         }
     },
     
     restoreRoot : function (c) {
+
         $(c).removeClass("rf-armed")
             .removeClass("rf-glowing-root");
-            
-        if ( c!=null && $.data(c,"selected") == "true" ) {
+        
+        // added rf-highlight to avoid highlightHelp graphical issue
+        if ( c!=null && $.data(c,"selected") == "true" && !$(c).hasClass("rf-highlight")) {
             $(c).addClass("rf-selected");
         }
     },
     
     select : function (c) {
-    	requestRunning = true
+    	requestRunning = true;
         $(c).removeClass("rf-armed")
             .removeClass("rf-glowing")
-			.animate({'opacity' : '20'}, 500, "linear", function () {
+			.animate({'opacity' : '20'}, 300, "linear", function () {
+
 				$(c).removeClass("rf-highlight").addClass("rf-selected")
-				.animate({'opacity' : 'show'}, 500, "linear", requestRunning = false)
+				.animate({'opacity' : 'show'}, 300, "linear", requestRunning = false)
 			})
     },
     
+    /*
     highlight : function (c) {
         $(c).removeClass("rf-armed")
             .removeClass("rf-selected")
 			.addClass("rf-highlight");
     },
+    */
     
     //this function fixes the highlighting issue for overlapped words by using manually set cellUsedLocations (array where cellUsedLocations[i][0] = row and cellUsedLocations[i][1] = col)
     highlightHelp : function (w) {
     
         for (i=0;i<w.size;i++) {
-        	$("#rf-tablegrid tr:eq("+(w.cellsUsedLocations[i][0])+") td:eq("+(w.cellsUsedLocations[i][1])+")").addClass("rf-highlight")
+            theCells = $("#rf-tablegrid tr:eq("+(w.cellsUsedLocations[i][0])+") td:eq("+(w.cellsUsedLocations[i][1])+")")
+            
+            theCells.removeClass("rf-armed")
+                    .removeClass("rf-selected")
+                    .removeClass("rf-glowing")
+                    .removeClass("rf-glowing-root")
+                    .addClass("rf-highlight")
         	}
     },
 	
     signalWordFound : function (w) {
+        requestRunning = true;
 
-		$(w).css("background",'yellow').animate({"opacity": 'hide'},1000,"linear",
+		$(w).css("background",'yellow').animate({"opacity": 'hide'},300,"linear",
 					 function () {
 						 $(w).css("background",'white')
-						 $(w).addClass('rf-foundword').animate({"opacity": 'show'},1000,"linear")
+						 $(w).addClass('rf-foundword').animate({"opacity": 'show'},300,"linear", requestRunning = false)
 					 });
     },
-
-	
-
 
 	clean : function (c) {
         $(c).removeClass("rf-armed")
             .removeClass("rf-glowing")
+            .removeClass("rf-glowing-root")
             .removeClass("rf-selected");
             
         $.removeData($(c),"selected");    
@@ -725,8 +739,11 @@ function HorizontalPopulator(row, col, word, grid) {
     this.writeWord = function () {
 
         var chars = word.chars;
-        word.row = this.row+1
-        word.col = this.col+1
+        var lrow = this.row;
+        var lcol = this.col;
+        word.row = this.row+1;
+        word.col = this.col+1;
+
         for (var i=0;i<word.size;i++) {
             var c = new Cell();
             c.value = chars[i];
@@ -848,11 +865,15 @@ function VerticalPopulator(row, col, word, grid) {
 
     
     //write word on grid at given location
+    //also remember which cells were used for displaying the word
     this.writeWord = function () {
 
         var chars = word.chars;
-        word.row = this.row+1
-        word.col = this.col+1
+        var lrow = this.row;
+        var lcol = this.col;
+        word.row = this.row+1;
+        word.col = this.col+1;
+
         for (var i=0;i<word.size;i++) {
             var c = new Cell();
             c.value = chars[i];
@@ -994,8 +1015,9 @@ function LeftDiagonalPopulator(row, col, word, grid) {
         var chars = word.chars;
         var lrow = this.row;
         var lcol = this.col;
-        word.row = this.row+1
-        word.col = this.col+1
+        word.row = this.row+1;
+        word.col = this.col+1;
+
         for (var i=0;i<word.size;i++) {
             var c = new Cell();
             c.value = chars[i];
@@ -1089,7 +1111,7 @@ function RightDiagonalPopulator(row, col, word, grid) {
     //console.log(word);
 
     this.grid = grid;
-    this.row =  row;
+    this.row = row;
     this.col = col;
     this.word = word;
     this.size = this.grid.size();
@@ -1151,8 +1173,9 @@ function RightDiagonalPopulator(row, col, word, grid) {
         var chars = word.chars;
         var lrow = this.row;
         var lcol = this.col;
-        word.row = this.row+1
-        word.col = this.col+1
+        word.row = this.row+1;
+        word.col = this.col+1;
+        
         for (var i=0;i<word.size;i++) {
             var c = new Cell();
             c.value = chars[i];
@@ -1361,7 +1384,7 @@ var Util = {
 } 
 
 /*
-Overlapped word fix
+Overlapped word check
 */
 function checkOverlappedWords (model) {
 	for (i=0; i<model.wordList.words.length;i++) {
@@ -1374,8 +1397,8 @@ function checkOverlappedWords (model) {
 				}
 			}
 		}
-	}			
-			
+    }
+    
 
 
 //------------------------------------------------------------------------------
@@ -1403,7 +1426,6 @@ var GameWidgetHelper = {
     renderGame : function(container, model) {
         var grid = model.grid;
         var cells = grid.cells;
-        
         
         var puzzleGrid = "<div id='rf-searchgamecontainer'><table id='rf-tablegrid' cellspacing=0 cellpadding=0 class='rf-tablestyle'>";
         for (var i=0;i<grid.size();i++) {
