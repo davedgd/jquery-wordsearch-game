@@ -1105,11 +1105,6 @@ function LeftDiagonalPopulator(row, col, word, grid) {
 //Create a RightDiagonal Populator Strategy 
 function RightDiagonalPopulator(row, col, word, grid) {
 
-    // reverse rightdiagonal placement for left-to-right reading
-    word.chars = word.value.split('').reverse();
-    word.value = word.value.split('').reverse().join('');
-    //console.log(word);
-
     this.grid = grid;
     this.row = row;
     this.col = col;
@@ -1169,6 +1164,10 @@ function RightDiagonalPopulator(row, col, word, grid) {
     //write word on grid at given location
     //also remember which cells were used for displaying the word
     this.writeWord = function () {
+
+        // reverse rightdiagonal placement for left-to-right reading
+        word.chars = word.value.split('').reverse();
+        word.value = word.value.split('').reverse().join('');
 
         var chars = word.chars;
         var lrow = this.row;
@@ -1392,8 +1391,8 @@ function checkOverlappedWords (model) {
 		for (j=0; j<model.wordList.words[i].cellsUsed.length; j++) {
 			//console.log(model.wordList.words[i].cellsUsed[j].td)
 			if(!model.wordList.words[i].cellsUsed[j].td) {
-				console.log('Overlapped Word:' + model.wordList.words[i].value)
-				console.log(model.wordList.words[i])
+				console.log('Overlapped Word: ' + model.wordList.words[i].value)
+				//console.log(model.wordList.words[i])
 				}
 			}
 		}
