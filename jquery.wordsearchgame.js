@@ -1328,9 +1328,20 @@ function WordList() {
 		for (i = 0; i<csvwordsList.length; i++) {
             csvwordsList[i] = jQuery.trim(csvwordsList[i])
             if (/\s/.test(csvwordsList[i])) {
-                alert('Words in the word list should not contain spaces! Aborting...')
-                throw new Error("Words in the word list should not contain spaces! Aborting...");
+                msg = 'Words in the word list should not contain spaces! Aborting...';
+                alert(msg);
+                throw new Error(msg);
             }
+
+            //check for non letter characters
+            for (j = 0; j<csvwordsList[i].length; j++) {
+                if (csvwordsList[i][j].toUpperCase() == csvwordsList[i][j].toLowerCase()) {
+                    msg = 'Words in the word list should not contain unusual characters (e.g., hyphens)! Aborting...';
+                    alert(msg);
+                    throw new Error(msg);
+                }
+            }
+
         }
 		
         var $n = this.words;
