@@ -1323,10 +1323,15 @@ function WordList() {
     
     this.loadWords = function (csvwords) {
 
-		//fix extra spaces bug
-		csvwordsList = csvwords.split(",")
+		//word list checks
+        csvwordsList = csvwords.split(",")
+
 		for (i = 0; i<csvwordsList.length; i++) {
+
+            //remove leading white space
             csvwordsList[i] = jQuery.trim(csvwordsList[i])
+
+            //check for spaces in words
             if (/\s/.test(csvwordsList[i])) {
                 msg = 'Words in the word list should not contain spaces! Aborting...';
                 alert(msg);
@@ -1342,6 +1347,14 @@ function WordList() {
                 }
             }
 
+        }
+
+        //check for duplicate words
+        csvwordsListDeduped = Array.from(new Set(csvwordsList));
+        if (csvwordsList.length != csvwordsListDeduped.length) {
+            msg = 'Duplicate words detected in the word list! Aborting...';
+            alert(msg);
+            throw new Error(msg);
         }
 		
         var $n = this.words;
