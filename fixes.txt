@@ -1,5 +1,4 @@
 Known Bugs:
-- MINOR: if you enter two words that overlap (e.g., "cat" and "cats"), you will run into problems with the repeat word checker... need to abort if one word is contained in another (next patch)
 - MINOR: assist bugs out if you search for words during help reveal animation (maybe disable grid selection during animation?)
 - MINOR: it's still possible to search for individual characters in the grid via CTRL+F/command+F; need to use complex data-type approach to work around
 
@@ -18,3 +17,4 @@ Fixed Bugs:
 - wordgrid should not be selectable via highlighting (CSS?)
 - need to ensure the word list doesn't contain exact duplicates (not sure what happens -- presumably the same word 2x? [yes])
 - a word may appear twice by chance despite not being in the list (with longer words this should be rare; saw it with "six" and "one") -- note: fully checking horizontal/vertical/both diagonals, including reversals and resetting puzzle as needed
+- if you enter two words that overlap (e.g., "cat" and "cats"), you will run into problems with the repeat word checker... need to abort if one word is contained in another (next patch)

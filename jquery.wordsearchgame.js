@@ -1328,7 +1328,7 @@ function WordList() {
     this.loadWords = function (csvwords) {
 
 		//word list checks
-        csvwordsList = csvwords.split(",")
+        csvwordsList = csvwords.toUpperCase().split(",")
 
 		for (i = 0; i<csvwordsList.length; i++) {
 
@@ -1359,6 +1359,18 @@ function WordList() {
             msg = 'Duplicate words detected in the word list! Aborting...';
             alert(msg);
             throw new Error(msg);
+        }
+
+        //check for partial overlap
+        for (i = 0; i<csvwordsList.length; i++) {
+            csvwordsListOther = csvwordsList.slice(0)
+            csvwordsListOther.splice(i, 1)
+            for (j = 0; j<csvwordsListOther.length; j++)
+                if (csvwordsListOther[j].includes(csvwordsList[i])) {
+                    msg = 'Partial overlap detected in the word list! Aborting...';
+                    alert(msg);
+                    throw new Error(msg);
+                }
         }
 		
         var $n = this.words;
