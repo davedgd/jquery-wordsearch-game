@@ -131,14 +131,18 @@
             
             _create : function () {
                 //member variables
-                this.model      = GameWidgetHelper.prepGrid(this.options.gridsize, this.options.wordlist)
+                //note: do/while checks for repeating words and recreates as needed
+                do {
+                    this.model      = GameWidgetHelper.prepGrid(this.options.gridsize, this.options.wordlist);
+                } while (checkRepeatedWords(this.model) == "repeats");
+
                 this.startedAt  = new Root();
                 this.hotzone    = new Hotzone();
                 this.arms       = new Arms();
                 
                 onWordFound = this.options.onWordFound;
 				onWordSearchComplete = this.options.onWordSearchComplete;
-				maxWords = this.options.wordlist.split(",").length;
+                maxWords = this.options.wordlist.split(",").length;
                 
 				GameWidgetHelper.renderGame(this.element[0],this.model);
 				
@@ -1414,14 +1418,97 @@ function checkOverlappedWords (model) {
 		//console.log(model.wordList.words[i])
 		for (j=0; j<model.wordList.words[i].cellsUsed.length; j++) {
 			//console.log(model.wordList.words[i].cellsUsed[j].td)
-			if(!model.wordList.words[i].cellsUsed[j].td) {
+			if (!model.wordList.words[i].cellsUsed[j].td) {
 				console.log('Overlapped Word: ' + model.wordList.words[i].value)
 				//console.log(model.wordList.words[i])
-				}
 			}
 		}
     }
+}
+
+/*
+Repeated word check
+*/
+function checkRepeatedWords (model) {
+
+    checkResult = "clear"
+
+    words = model.wordList.words
+    cells = model.grid.cells
+
+    for (j = 0; j<words.length; j++)
+        words[j].occurences = 0
+
+    theSequences = new Array();
+
+    //horizontal
+    for (i = 0; i<cells.length; i++) {
+        theRow = ''
+        for (j = 0; j<cells[0].length; j++)
+            theRow += cells[i][j].value
+        theSequences.push(theRow)
+    }
+
+    //left and right diagonals
+
+    // credit to: https://stackoverflow.com/questions/35917734/how-do-i-traverse-an-array-diagonally-in-javascript
+    function getAllDiagonal(array) {
+        function row(offset) {
+            var i = array.length, a = '';
+            while (i--) {
+                a += array[i][j + (offset ? offset - i : i)] || '';
+            }
+            return a;
+        }
     
+        var result = [[], []], j;
+        for (j = 1 - array.length; j < array[0].length; j++) {
+            result[0].push(row(0));
+            result[1].push(row(array.length - 1));
+        }
+        return result;
+    }
+    
+    res = getAllDiagonal(theSequences)
+    leftDiag = res[0]
+    rightDiag = res[1]
+    //console.log(leftDiag)
+    //console.log(rightDiag)
+    theSequences.concat(leftDiag).concat(rightDiag)
+
+    //vertical
+    for (i = 0; i<cells.length; i++) {
+        theCol = ''
+        for (j = 0; j<cells[0].length; j++)
+            theCol += cells[j][i].value
+        theSequences.push(theCol)
+    }
+
+    for (i = 0; i < theSequences.length; i++)
+        for (j = 0; j<words.length; j++) {
+            theWord = words[j].value
+            theWordReverse = theWord.split('').reverse().join('');
+            theOccurences = (theSequences[i].split(theWord).length - 1) + (theSequences[i].split(theWordReverse).length - 1)
+            words[j].occurences += theOccurences
+            /*
+            if (words[j].occurences > 1 && theOccurences > 0) {
+                console.log(theWord)
+                console.log(theSequences[i])
+            }
+            */
+        }
+
+    for (j = 0; j<words.length; j++)
+        if (words[j].occurences > 1) {
+            console.log('Repeated Word: ' + words[j].value)
+            //console.log(words[j])
+            checkResult = "repeats"
+            console.log('Reseting due to repeat...')
+        }
+
+    return(checkResult)
+
+}
 
 
 //------------------------------------------------------------------------------
