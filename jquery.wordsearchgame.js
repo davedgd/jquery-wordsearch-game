@@ -1354,7 +1354,7 @@ function WordList() {
         }
 
         //check for duplicate words
-        csvwordsListDeduped = Array.from(new Set(csvwordsList));
+        csvwordsListDeduped = csvwordsList.filter( function( element, index, array ) { return array.indexOf(element) == index; });
         if (csvwordsList.length != csvwordsListDeduped.length) {
             msg = 'Duplicate words detected in the word list! Aborting...';
             alert(msg);
