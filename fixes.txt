@@ -1,0 +1,20 @@
+Known Bugs:
+- MINOR: if you enter two words that overlap (e.g., "cat" and "cats"), you will run into problems with the repeat word checker... need to abort if one word is contained in another (next patch)
+- MINOR: assist bugs out if you search for words during help reveal animation (maybe disable grid selection during animation?)
+- MINOR: it's still possible to search for individual characters in the grid via CTRL+F/command+F; need to use complex data-type approach to work around
+
+Possible/Planned Features:
+- incorporate/activate option to reverse words
+- add a feature to resample the puzzle until more words fit (maybe 10 times?) -- currently it just drops words as needed (note this isn't fully solvable; e.g., 30 long words into a 3x3 grid for an extreme case)
+
+Fixed Bugs:
+- fail launching puzzle with warning if you have spaces in the word list words
+- mouseup issue when highlighting words (e.g., when mouse cursor enters the word list box or leaves the word grid)
+- assist should animate much faster (same timing as word show)
+- fixed animation surrounding root letter highlighted in word grid (i.e., "armed")
+- fixed assist animation color issue
+- fix minor bug regarding unintended word reversals
+- fail on not just spaces in words, but also non-alphabet characters (e.g., dashes)
+- wordgrid should not be selectable via highlighting (CSS?)
+- need to ensure the word list doesn't contain exact duplicates (not sure what happens -- presumably the same word 2x? [yes])
+- a word may appear twice by chance despite not being in the list (with longer words this should be rare; saw it with "six" and "one") -- note: fully checking horizontal/vertical/both diagonals, including reversals and resetting puzzle as needed
